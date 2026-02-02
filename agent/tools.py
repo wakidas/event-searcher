@@ -106,7 +106,7 @@ def search_connpass_events(
             f"   📅 {date_str}\n"
             f"   📍 {address}\n"
             f"   👥 {capacity}\n"
-            f"   🔗 {event.get('event_url', '')}"
+            f"   🔗 {event.get('url', '')}"
         )
 
     header = f"**{len(events)}件のイベントが見つかりました**（上位10件を表示）\n\n"
