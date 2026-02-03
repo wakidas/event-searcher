@@ -1,11 +1,44 @@
 """Streamlit UI"""
 
+import json
+
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from agent import create_agent
+
+
+def render_response(text: str):
+    """レスポンスを解析し、画像をst.imageで表示する"""
+    if not text:
+        return
+
+    # まずJSON形式を試す
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+
+    if isinstance(data, dict) and "events" in data:
+        total = data.get("total")
+        shown = data.get("shown")
+        if total is not None and shown is not None:
+            st.markdown(f"**{total}件のイベントが見つかりました**（上位{shown}件を表示）")
+        for event in data.get("events", []):
+            st.markdown(f"{event.get('index', '')}. **{event.get('title', '無題')}**")
+            image_url = event.get("image_url")
+            if image_url:
+                st.image(image_url, width=450)
+            st.markdown(f"📅 {event.get('date', '未定')}")
+            st.markdown(f"📍 {event.get('address', 'オンライン')}")
+            st.markdown(f"👥 {event.get('capacity', '')}")
+            st.markdown(f"🔗 {event.get('url', '')}")
+        return
+
+    if text.strip():
+        st.markdown(text)
 
 st.set_page_config(page_title="connpassイベント検索", page_icon="🔍")
 st.title("🔍 connpassイベント検索")
@@ -22,7 +55,7 @@ if "messages" not in st.session_state:
 # チャット履歴表示
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        render_response(msg["content"])
 
 # ユーザー入力
 if prompt := st.chat_input("例: 来週東京でPythonの勉強会ある？"):
@@ -35,6 +68,7 @@ if prompt := st.chat_input("例: 来週東京でPythonの勉強会ある？"):
     with st.chat_message("assistant"):
         status_container = st.status("🔍 検索中...", expanded=True)
         response = ""
+        tool_response = ""
         
         for chunk in st.session_state.agent.stream(
             {"messages": [{"role": "user", "content": prompt}]}
@@ -63,9 +97,14 @@ if prompt := st.chat_input("例: 来週東京でPythonの勉強会ある？"):
                     if hasattr(msg, "content"):
                         status_container.update(label="📊 検索結果を処理中...")
                         status_container.write("✅ データ取得完了、回答を生成中...")
+                        tool_response = msg.content or ""
         
         status_container.update(label="✨ 完了!", state="complete", expanded=False)
-        st.markdown(response)
+
+        # LLMの最終回答がない場合のみ、ツール結果を表示する
+        if tool_response and not response:
+            response = tool_response
+        render_response(response)
 
     # アシスタントメッセージを追加
     st.session_state.messages.append({"role": "assistant", "content": response})

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import json
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -29,7 +30,7 @@ def search_connpass_events(
         locations: 場所フィルターのリスト（例: ["東京都", "online"]）。指定しない場合は全国検索。
 
     Returns:
-        検索結果のイベント一覧（テキスト形式）
+        検索結果のイベント一覧（JSON文字列）
     """
     api_key = os.getenv("CONNPASS_API_KEY")
     if not api_key:
@@ -87,7 +88,7 @@ def search_connpass_events(
     if not events:
         return "該当するイベントが見つかりませんでした。"
 
-    # 結果をフォーマット
+    # 結果を構造化
     results = []
     for i, event in enumerate(events[:10], 1):
         started_at = event.get("started_at", "")
@@ -102,16 +103,26 @@ def search_connpass_events(
         limit = event.get("limit")
         capacity = f"{accepted}/{limit}人" if limit else f"{accepted}人参加"
 
+        image_url = event.get("image_url")
+
         results.append(
-            f"{i}. **{event.get('title', '無題')}**\n"
-            f"   📅 {date_str}\n"
-            f"   📍 {address}\n"
-            f"   👥 {capacity}\n"
-            f"   🔗 {event.get('url', '')}"
+            {
+                "index": i,
+                "title": event.get("title", "無題"),
+                "date": date_str,
+                "address": address,
+                "capacity": capacity,
+                "url": event.get("url", ""),
+                "image_url": image_url,
+            }
         )
 
-    header = f"**{len(events)}件のイベントが見つかりました**（上位10件を表示）\n\n"
-    return header + "\n\n".join(results)
+    payload = {
+        "total": len(events),
+        "shown": len(results),
+        "events": results,
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def get_tools():
