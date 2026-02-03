@@ -1,10 +1,13 @@
 """connpass API v2 検索ツール"""
 
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 from langchain_core.tools import tool
 
 CONNPASS_API_URL = "https://connpass.com/api/v2/events/"
@@ -74,7 +77,8 @@ def search_connpass_events(
 
     try:
         response = requests.get(CONNPASS_API_URL, params=params, headers=headers, timeout=10)
-        # デバッグ: ステータスコードとレスポンスを確認
+        if response.status_code == 429:
+            logger.warning("connpass API rate limit hit: %s", response.url)
         if response.status_code != 200:
             return f"APIエラー: status={response.status_code}, body={response.text}, url={response.url}"
         data = response.json()
