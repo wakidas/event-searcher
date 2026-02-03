@@ -81,6 +81,9 @@ def search_connpass_events(
 
     events = data.get("events", [])
 
+    # 開催日が近い順にソート
+    events.sort(key=lambda e: e.get("started_at", "") or "9999-12-31")
+
     if not events:
         return "該当するイベントが見つかりませんでした。"
 
