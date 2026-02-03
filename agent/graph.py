@@ -1,9 +1,20 @@
 """LangGraphエージェント定義"""
 
+import os
+
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from agent.tools import get_tools
+
+
+def _get_langfuse_handler():
+    """Langfuseハンドラーを取得（設定されている場合のみ）"""
+    if os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"):
+        from langfuse.langchain import CallbackHandler
+
+        return CallbackHandler()
+    return None
 
 SYSTEM_PROMPT = """あなたはconnpassのイベント検索アシスタントです。
 ユーザーの要望に基づいて、技術イベント・勉強会を検索します。
@@ -27,6 +38,9 @@ SYSTEM_PROMPT = """あなたはconnpassのイベント検索アシスタント�
 
 def create_agent():
     """エージェントを作成して返す"""
-    llm = ChatOpenAI(model="gpt-5-mini", temperature=0)
+    langfuse_handler = _get_langfuse_handler()
+    callbacks = [langfuse_handler] if langfuse_handler else None
+
+    llm = ChatOpenAI(model="gpt-5-mini", temperature=0, callbacks=callbacks)
     tools = get_tools()
     return create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
