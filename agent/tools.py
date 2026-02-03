@@ -18,7 +18,7 @@ def search_connpass_events(
     keyword: str,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    location: Optional[str] = None,
+    locations: Optional[list[str]] = None,
 ) -> str:
     """connpass APIでイベントを検索します。
 
@@ -26,7 +26,7 @@ def search_connpass_events(
         keyword: 検索キーワード（例: Python, React, AWS）
         start_date: 開始日（YYYY-MM-DD形式）。指定しない場合は今日から検索。
         end_date: 終了日（YYYY-MM-DD形式）。指定しない場合は1ヶ月先まで。
-        location: 場所フィルター（"東京" または "オンライン"）
+        locations: 場所フィルターのリスト（例: ["東京都", "online"]）。指定しない場合は全国検索。
 
     Returns:
         検索結果のイベント一覧（テキスト形式）
@@ -58,14 +58,8 @@ def search_connpass_events(
         "ymd": ",".join(ymd_list) if ymd_list else None,
         "count": 30,
         "order": 2,  # 開催日時順
+        "prefecture": ",".join(locations) if locations else None,
     }
-
-    # 場所フィルター（v2 APIのprefectureパラメータ）
-    if location:
-        if location == "オンライン":
-            params["prefecture"] = "online"
-        elif location == "東京":
-            params["prefecture"] = "東京都"
 
     # Noneの値を除去
     params = {k: v for k, v in params.items() if v is not None}
